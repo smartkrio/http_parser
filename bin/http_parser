@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby
+require 'json'
+
+loaded_request = STDIN.read
+
+response = {}
+next_body = false
+loaded_request.each_line do |line|
+
+    if line.include? "HAHA"
+        STDOUT.write({:error => "some error"}.to_json) and exit
+    end
+
+    if next_body
+        response["body"] = line.gsub(/\n|\r/, '')
+        response["Content-Length"] = response["body"].size.to_s
+        next_body = false
+    end
+
+    if line.include? ": "
+        keyvalue =  line.gsub(/\n|\r/, '').split(": ")
+        response[keyvalue[0]] = keyvalue[1]
+    elsif line.include? "HTTP"
+        response["method"], response["url"], http_version  = line.split
+        response['http_version'] = http_version.split("/")[1]
+    elsif line.start_with? "\r"
+        next_body = true
+    end
+end
+
+STDOUT.write(response.to_json)
